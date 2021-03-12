@@ -8,42 +8,98 @@ Created on Thu Mar 11 07:39:04 2021
 import numpy as np
 import matplotlib.pyplot as plt
 
-"Definición de la ecuación diferencial"
+def dh (h, q, k, A, hv):
+    """
+    dh (h, q, k, A, hv), dh/dt segun el modelo planteado para los tanques
 
-def dh (q, k, h):
-    dh1 = q[0] - k[0]*np.sqrt(abs(h[0]-h[1]))*np.sign(h[0]-h[1])-k[3]*np.sqrt(h[0])
-    dh2 = k[0]*np.sqrt(abs(h[0]-h[1]))*np.sign(h[0]-h[1]) + k[1]*np.sqrt(abs(h[2]-h[1]))-np.sign(h[2]-h[1]) - k[4]*np.sqrt(h[1])
-    dh3 = q[1] - k[1]*np.sqrt(abs(h[2]-h[1]))*np.sign(h[2]-h[1])-k[2]*np.sqrt(h[2])-k[2]*np.sqrt(h[2])
-    dh = np.array([dh1, dh2, dh3])
-    return dh
+    Parameters
+    ----------
+    h : numpy float array 3x1
+        altura del fluido en cada tanque.
+    q : numpy float array 1x2
+        caudal de las bombas A y B.
+    k : numpy float array 1x6
+        Constante asociada a valvulas.
+    A : float
+        Area de los tanques.
+    hv : float
+        Altura de las valvulas.
 
-
-
-"Método de Runge Kutta"
-
-def RK(f,h,y,q,k):
-    y = y.reshape((-1,1))
+    Returns
+    -------
+    dh : numpy float array 3x1
+        derivada temporal de las alturas.
+    qv : numpy float array 1x6
+        cauldal en cada valvula.
+    """
+    dh = np.empty((3,1))
+    qv = np.empty((6,1))
     
-    k1 = f(q,k,y)
-    k2 = f(q,k,y+0.5*k1*h)
-    k3 = f(q,k,y+0.5*k2*h)
-    k4 = f(q,k,y+k3*h)
-
-    y_i = y +0.16667 * h *(k1 + 2*k2 + 2*k3 +k4)
+    qv[0] = np.sqrt(abs(h[0]-h[1]))*np.sign(h[0]-h[1]) #q1-2
+    qv[1] = np.sqrt(abs(h[2]-h[1]))*np.sign(h[2]-h[1]) #q1-3
+    qv[2] = np.sqrt(max(0,h[2]-hv)) #q3
+    qv[3] = np.sqrt(h[0]) #qe1
+    qv[4] = np.sqrt(h[1]) #qe2
+    qv[5] = np.sqrt(h[2]) #qe3
     
-    return y_i
+    dh[0] = q[0] - k[0]*qv[0]-k[3]*qv[3]
+    dh[1] = k[0]*qv[0] + k[1]*qv[1] - k[4]*qv[4]
+    dh[2] = q[1] - k[1]*qv[1]-k[2]*qv[2]-k[5]*qv[5]
+    
+    dh = dh/A
+    return (dh,qv)
+
+
+
+def RK(f,dx,x,param):
+    """
+    RK(f,dx,x,param), Método de Runge Kutta de cuarto orden
+    
+    Parameters
+    ----------
+    f : function
+        FUncion que describe la derivada de la variable x.
+    dx : float
+        Paso del metodo.
+    x : numpy float array nx1
+        valor de la iteracion actual.
+    param : diccionario
+        Contiene otros parametros de la funcion f.
+
+    Returns
+    -------
+    x_i : numpy float array nx1
+        Valor de x actualizado.
+    otro : ?
+        Otros elementos retornados por f.
+
+    """
+    x = x.reshape((-1,1))
+    
+    k1,otro = f(x,**param)
+    k2,otro = f(x+0.5*k1*dx,**param)
+    k3,otro = f(x+0.5*k2*dx,**param)
+    k4,otro = f(x+k3*dx,**param)
+
+    x_i = x +0.16667 * dx *(k1 + 2*k2 + 2*k3 +k4)
+    
+    return x_i,otro
 
 
 #"Parámetros del sistema"
 g = 9.8
 St = 1
-S = np.ones(6)
+S = np.ones(6)*0.2
 
 #"Constante de áreas"
 k = np.sqrt(2*g)*S/St
 
 #"Alturas"
 h = np.zeros((3,1))
+hv = 0.1
+
+#Area tanques
+A = 1
 
 #Entradas
 
@@ -56,6 +112,8 @@ ht[:,0] = h[:,0]
 t=range(100)
 
 for i in range(1,100):
-    ht[:,i]=RK(dh,dx,ht[:,i-1],q,k).reshape((3))
+    param = {"q":q,"k":k, "A":A, "hv":hv}
+    haux,qv =RK(dh,dx,ht[:,i-1],param)
+    ht[:,i] = haux.reshape((3))
     
 plt.plot(t, ht[0,:],t, ht[1,:],t, ht[2,:])
