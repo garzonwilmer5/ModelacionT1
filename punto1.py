@@ -33,18 +33,18 @@ def dh (h, q, k, A, hv):
         cauldal en cada valvula.
     """
     dh = np.empty((3,1))
-    qv = np.empty((6,1))
+    qv = np.empty((1,6))
     
-    qv[0] = np.sqrt(abs(h[0]-h[1]))*np.sign(h[0]-h[1]) #q1-2
-    qv[1] = np.sqrt(abs(h[2]-h[1]))*np.sign(h[2]-h[1]) #q1-3
-    qv[2] = np.sqrt(max(0,h[2]-hv)) #q3
-    qv[3] = np.sqrt(h[0]) #qe1
-    qv[4] = np.sqrt(h[1]) #qe2
-    qv[5] = np.sqrt(h[2]) #qe3
+    qv[0] = k[0]*np.sqrt(abs(h[0]-h[1]))*np.sign(h[0]-h[1]) #q1-2
+    qv[1] = k[1]*np.sqrt(abs(h[2]-h[1]))*np.sign(h[2]-h[1]) #q1-3
+    qv[2] = k[2]*np.sqrt(max(0,h[2]-hv)) #q3
+    qv[3] = k[3]*np.sqrt(h[0]) #qe1
+    qv[4] = k[4]*np.sqrt(h[1]) #qe2
+    qv[5] = k[5]*np.sqrt(h[2]) #qe3
     
-    dh[0] = q[0] - k[0]*qv[0]-k[3]*qv[3]
-    dh[1] = k[0]*qv[0] + k[1]*qv[1] - k[4]*qv[4]
-    dh[2] = q[1] - k[1]*qv[1]-k[2]*qv[2]-k[5]*qv[5]
+    dh[0] = q[0] - qv[0] - qv[3]
+    dh[1] = qv[0] + qv[1] - qv[4]
+    dh[2] = q[1] - qv[1] - qv[2] - qv[5]
     
     dh = dh/A
     return (dh,qv)
@@ -58,7 +58,7 @@ def RK(f,dx,x,param):
     Parameters
     ----------
     f : function
-        FUncion que describe la derivada de la variable x.
+        Funcion que describe la derivada de la variable x.
     dx : float
         Paso del metodo.
     x : numpy float array nx1
@@ -72,7 +72,6 @@ def RK(f,dx,x,param):
         Valor de x actualizado.
     otro : ?
         Otros elementos retornados por f.
-
     """
     x = x.reshape((-1,1))
     
