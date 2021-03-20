@@ -47,40 +47,25 @@ def dx(x):
     react = np.array([[k_f[0]*x[2]*x[0] , k_b[0]*x[6]*x[3]],
                       [k_f[1]*x[6]*x[1] , k_b[1]*x[2]*x[3]],
                       [k_f[2]*x[3]*x[1] , k_b[2]*x[2]*x[4]],
-                      [k_f[3]*x[6]*x[4] , k_b[3]*x[3]*x[1]],
+                      [k_f[3]*x[6]*x[4] , k_b[3]*x[3]**2],
                       [k_f[4]*x[5]*x[2] , k_b[4]*x[1]*x[0]],
                       [k_f[5]*x[5]*x[6] , k_b[5]*x[3]*x[0]]])
-    #dO2/dt
-    dx[0] = (-react[0,0] + react[0,1]
-             +react[4,0] - react[4,1]
-             +react[5,0] - react[5,1])
-    #dH2/dt
-    dx[1] = (-react[1,0] + react[1,1]
-             -react[2,0] + react[2,1]
-             +react[4,0] - react[4,1])
-    #dH/dt
-    dx[2] = (-react[0,0] + react[1,1]
-             +react[1,0] - react[1,1]
-             +react[2,0] - react[2,1]
-             -react[4,0] + react[4,1])
-    #dOH/dt
-    dx[3] = (react[0,0] - react[0,1]
-            +react[1,0] - react[1,1]
-            -react[2,0] + react[2,1]
-            +react[3,0] - react[3,1]) 
-    #dH2O/dt
-    dx[4] = (react[2,0] - react[2,1]
-            -react[3,0] + react[3,1]) 
-    #dHO2/dt
-    dx[5] = (-react[4,0] + react[4,1]
-            -react[5,0] + react[5,1])
-    #dO/dt
-    dx[6] = (react[0,0] - react[0,1]
-            -react[1,0] + react[1,1]
-            -react[3,0] + react[3,1]
-            -react[5,0] + react[5,1])
+    
+    reactf = react[:,0]
+    reactb = react[:,1]
+    #               f0 f1 f2 f3 f4 f5
+    df = np.array([[-1, 0, 0, 0, 1, 1], #O2
+                   [ 0,-1,-1, 0, 1, 0], #H2
+                   [-1, 1, 1, 0,-1, 0], #H
+                   [ 1, 1,-1, 2, 0, 1], #OH
+                   [ 0, 0, 1,-1, 0, 0], #H2O
+                   [ 0, 0, 0, 0,-1,-1], #HO2
+                   [ 1,-1, 0,-1, 0,-1]])#O
+
+    dx[0:7] = df@reactf-df@reactb
+    
     #dT/dt
-    dx[7] = -1/(x[2]+1e-6) * dx[1]*x[7]
+    dx[7] = -1/(x[1]+1e-6) * dx[1]*x[7]
     
     return dx
 
@@ -158,9 +143,9 @@ h_min = np.zeros(8)
 h_max = np.ones(8)*np.inf
 
 #paso RK
-dt = 1e-12 #s
+dt = 1e-9 #s
 #numero de pasos
-n = int(1*1e6)
+n = 30000
 
 #historico variabales
 xh = np.empty((8,n))
@@ -169,15 +154,16 @@ t=np.arange(n)#nano s
 
 for i in range(1,n):
     xh[:,i]=ajustar_limites(h_min,h_max,RK(dx,dt,xh[:,i-1]))
-t = t*1e-6     
+t = t*1e-3#nanos -> micro s
+     
 plt.plot(t, xh[0,:],t, xh[1,:],t, xh[2,:],t, xh[3,:],t, xh[4,:],t, xh[5,:],t, xh[6,:])
-plt.legend(["$O_2$","$H_2$","$H$","$OH$","$H_2O$","$HO_2$","$O$"])
+plt.legend(["$O_2$","$H_2$","$H$","$OH$","$H_2O$","$HO_2$","$O$"],loc='upper right')
 plt.xlabel("t ($\mu$s)")
-plt.ylabel("Concentracion")
+plt.ylabel("Concentracion (mol/m$^3$)")
 plt.show()
 plt.plot(t, xh[7,:])
 plt.xlabel("t ($\mu$s)")
-plt.ylabel("T(C)")
+plt.ylabel("T(K)")
 plt.show()
 
 
