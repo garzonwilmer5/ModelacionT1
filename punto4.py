@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 g = 9.81  # m/s^2
-amp = 0  # N
+amp = 10.0  # N
 mf = 0.5  # Hz
 
 
@@ -95,8 +95,9 @@ def model(x, t, m, l, A, I):
     dx[1] -= g
     dx[3] += Fm/m[5] - g
     # dw/dt
-    dx[4] = (-0.8/I)*(dx[0]+g)*((l[0]*m[0]-l[2]*m[2])*np.sin(x[5])
+    a = (-1/I)*(dx[0]+g)*((l[0]*m[0]-l[2]*m[2])*np.sin(x[5])
                                 + (l[1]*m[1]-l[3]*m[3])*np.cos(x[5]))
+    dx[4] = 0.8*a if (x[4]*a)>0 else 1.2*a
     # dtheta/dt
     dx[5] = x[4]
 
@@ -319,9 +320,9 @@ def aux_foo(x, mf, k, b):
 
 def simulacion(m, l, k, b, plot=True):
     # paso RK
-    dt = 0.1  # s
+    dt = 0.003  # s
     # numero de pasos
-    n = int(100/dt)  # simular200 segundos
+    n = int(300/dt)  # simular 5 minutos
 
     # historico variabales
     xh = np.empty((6, n))
@@ -344,12 +345,7 @@ def simulacion(m, l, k, b, plot=True):
 
     for i in range(1, n):
         xh[:, i] = RK(model, dt, xh[:, i-1], t[i], param)
-        """
-        if xh[5,i]>np.pi:
-            xh[5,i] -= 2*np.pi
-        if xh[5,i]<-np.pi:
-            xh[5,i] += 2*np.pi
-        """
+        
     score = simpson_1_3(abs(xh[4, :]), dt)
     if plot:
         plt.plot(t, xh[1, :], t, xh[3, :])
@@ -359,13 +355,14 @@ def simulacion(m, l, k, b, plot=True):
         plt.grid()
         plt.show()
         plt.plot(t, xh[5, :])
-        plt.title("score: "+str(score))
         plt.xlabel("t (s)")
         plt.ylabel("Angulo (rad)")
+        plt.grid()
         plt.show()
-
-    
-
+        plt.plot(t, xh[4, :])
+        plt.xlabel("t (s)")
+        plt.ylabel("Velocidad angular (rad/s)")
+        plt.show()
     return score
 
 
@@ -375,15 +372,15 @@ b = np.array([5, 5])  # kg/s
 mt = 10
 m6 = 10
 
-k[1] = newton_raphson(w, dw, x_0=k[1], itmax=100, param={
-                      "k5": k[0], "mt": mt, "m6": m6, "wn": mf})
+#k[1] = newton_raphson(w, dw, x_0=k[1], itmax=100, param={
+#                      "k5": k[0], "mt": mt, "m6": m6, "wn": mf})
 
 params = {"mf": np.array([mt, m6]), "k": k, "b": b}
 lb = np.ones((8,))*0.1
 ub = np.array([5, 5, 5, 5, 1, 1, 1, 1])
-#x = PSO(aux_foo, lb, ub, population_size=20,maxit=200, minimize=False, params=params)
-x = [0.1, 0.1, 0.1,4.00116512,0.1,0.1,0.1,0.1]
-#x = [0.1, 1.00701334, 3.24425462, 0.1, 0.1, 0.1, 0.1, 0.1]
+#x = PSO(aux_foo, lb, ub, population_size=10,maxit=50, minimize=False, params=params)
+#x = [0.1, 0.1, 0.1,4.00116512,0.1,0.1,0.1,0.1]
+x = [0.51621838, 5., 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 """
 927.4325918250141 [0.1, 1.71723913, 2.91673739, 0.1, 0.2619616, 0.1, 0.1, 1.]
 """
